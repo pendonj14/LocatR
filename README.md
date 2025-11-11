@@ -24,9 +24,9 @@ LocatR is a desktop application designed to manage student records, including th
 
 ## Screenshots
 
-![Main Window](build\assets\frame0\main.png)  
-![Add Student Window](build\assets\frame0\add.png)  
-![Edit Student Window](build\assets\frame0\edit.png)
+![Main Window](build/assets/frame0/main.png)  
+![Add Student Window](build/assets/frame0/add.png)  
+![Edit Student Window](build/assets/frame0/edit.png)
 
 ---
 
