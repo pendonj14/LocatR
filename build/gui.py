@@ -132,34 +132,49 @@ canvas = Canvas(
 )
 canvas.place(x = 0, y = 0)
 
-# Create a frame to hold the scrollable list
-list_frame = Frame(window, bg="#FFFFFF")
-list_frame.place(x=0, y=170, width=996, height=457)  # Start just below column headers
+# --- SCROLLABLE STUDENT LIST AREA (fixed, non-destructive) ---
 
-# Create a canvas for the scrollable content
+list_frame = Frame(window, bg="#FFFFFF")
+list_frame.place(x=0, y=170, width=996, height=457)
+
+# Canvas for scrolling
 list_canvas = Canvas(
     list_frame,
     bg="#FFFFFF",
-    height=391,
-    width=996,
     bd=0,
     highlightthickness=0,
 )
 list_canvas.pack(side=LEFT, fill=BOTH, expand=True)
 
-# Add a scrollbar
+# Scrollbar (right side)
 scrollbar = Scrollbar(list_frame, orient=VERTICAL, command=list_canvas.yview)
 scrollbar.pack(side=RIGHT, fill=Y)
+
+# Configure canvas to work with scrollbar
 list_canvas.configure(yscrollcommand=scrollbar.set)
 
-# Create a frame inside the canvas to hold the student rows
+# Inner frame that actually holds the student rows
 students_frame = Frame(list_canvas, bg="#FFFFFF")
-list_canvas.create_window((0, 0), window=students_frame, anchor=NW, width=996)
+students_window = list_canvas.create_window((0, 0), window=students_frame, anchor="nw")
 
-# Configure scrolling
-def configure_scroll_region(event):
+# Update scroll region when contents change
+def on_frame_configure(event):
     list_canvas.configure(scrollregion=list_canvas.bbox("all"))
-students_frame.bind("<Configure>", configure_scroll_region)
+
+students_frame.bind("<Configure>", on_frame_configure)
+
+# Keep inner frame width in sync with canvas width
+def on_canvas_configure(event):
+    list_canvas.itemconfig(students_window, width=event.width)
+
+list_canvas.bind("<Configure>", on_canvas_configure)
+
+# Enable smooth mouse wheel scrolling
+def _on_mousewheel(event):
+    list_canvas.yview_scroll(int(-1 * (event.delta / 120)), "units")
+
+list_canvas.bind_all("<MouseWheel>", _on_mousewheel)
+
 
 entry_image_1 = PhotoImage(
     file=relative_to_assets("entry_11.png"))
@@ -291,7 +306,7 @@ def validate_student_id(student_id: str) -> tuple[bool, str]:
 
 def validate_name(name: str) -> tuple[bool, str]:
     """Validate name: cannot contain numbers."""
-    if not name.strip():
+    if not name or not name.strip():
         return False, "Name is required."
     if any(char.isdigit() for char in name):
         return False, "Name cannot contain numbers."
@@ -299,7 +314,7 @@ def validate_name(name: str) -> tuple[bool, str]:
 
 def validate_course(course: str) -> tuple[bool, str]:
     """Validate course: cannot contain numbers."""
-    if not course.strip():
+    if not course or not course.strip():
         return False, "Course is required."
     if any(char.isdigit() for char in course):
         return False, "Course cannot contain numbers."
@@ -331,7 +346,6 @@ def load_students_from_db():
 
 
 def save_students_to_db():
-    """Overwrite all student records in the SQLite database."""
     conn = sqlite3.connect(DB_PATH)
     cur = conn.cursor()
 
@@ -567,6 +581,16 @@ def open_add_student_window() -> None:
         valid_id, id_error = validate_student_id(sid)
         if not valid_id:
             messagebox.showerror("Validation Error", id_error)
+            return
+        
+        valid_name, name_error = validate_name(name)
+        if not valid_name:
+            messagebox.showerror("Validation Error", name_error)
+            return
+
+        valid_course, course_error = validate_course(course)
+        if not valid_course:
+            messagebox.showerror("Validation Error", course_error)
             return
 
         conn = sqlite3.connect(DB_PATH)
